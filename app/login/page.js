@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,22 +21,21 @@ export default function LoginPage() {
       const email = formData.get("email");
       const password = formData.get("password");
 
-      const supabase = createClient();
-
-      const { error } = await supabase.auth.signInWithPassword({
+      const result = await signIn("credentials", {
         email,
         password,
+        redirect: false,
       });
 
-      if (error) {
-        setError(error.message);
+      if (!result || result.error) {
+        setError("Invalid email or password. Please try again.");
         return;
       }
 
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Unable to sign in. Please check your connection and try again.");
+      setError("Unable to sign in. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -61,6 +60,7 @@ export default function LoginPage() {
             name="email"
             type="email"
             placeholder="you@example.com"
+            autoComplete="email"
             required
           />
 
@@ -70,25 +70,30 @@ export default function LoginPage() {
             name="password"
             type="password"
             placeholder="Enter your password"
+            autoComplete="current-password"
             required
           />
 
-          {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
+          <div style={{ textAlign: "right", marginTop: "-8px" }}>
+            <Link href="/forgot-password">Forgot password?</Link>
+          </div>
 
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={loading}
-          >
+          {error && (
+            <p role="alert" style={{ color: "crimson" }}>
+              {error}
+            </p>
+          )}
+
+          <button type="submit" className="primary-button" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <p className="auth-switch">
-          Don&apos;t have an account?{" "}
-          <Link href="/register">Create one</Link>
+          Don&apos;t have an account? <Link href="/register">Create one</Link>
         </p>
       </div>
     </main>
   );
 }
+

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
   const [error, setError] = useState("");
@@ -16,39 +16,42 @@ export default function RegisterPage() {
     setMessage("");
     setLoading(true);
 
-    try {
-      const form = event.currentTarget;
-      const formData = new FormData(form);
+    const form = event.currentTarget;
 
+    try {
+      const formData = new FormData(form);
       const name = formData.get("name");
       const email = formData.get("email");
       const password = formData.get("password");
 
-      const supabase = createClient();
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-          },
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ name, email, password }),
       });
 
-      if (error) {
-        setError(error.message);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Unable to create your account.");
         return;
       }
 
-      if (data.session) {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result && !result.error) {
         window.location.href = "/dashboard";
-      } else {
-        setMessage(
-          "Account created! Check your email to confirm your account, then sign in."
-        );
-        form.reset();
+        return;
       }
+
+      form.reset();
+      setMessage("Account created successfully! Please sign in.");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
