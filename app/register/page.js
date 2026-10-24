@@ -3,55 +3,44 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(event) {
+  function handleRegister(event) {
     event.preventDefault();
     setError("");
     setMessage("");
     setLoading(true);
 
-    const form = event.currentTarget;
-
     try {
-      const formData = new FormData(form);
-      const name = formData.get("name");
-      const email = formData.get("email");
+      const formData = new FormData(event.currentTarget);
+      const name = formData.get("name").trim();
+      const email = formData.get("email").trim().toLowerCase();
       const password = formData.get("password");
 
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
+      const users = JSON.parse(
+        localStorage.getItem("teacherHubUsers") || "[]"
+      );
 
-      const data = await response.json();
+      const existingUser = users.find((user) => user.email === email);
 
-      if (!response.ok) {
-        setError(data.error || "Unable to create your account.");
+      if (existingUser) {
+        setError("An account with this email already exists.");
         return;
       }
 
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      const newUser = { name, email, password };
 
-      if (result && !result.error) {
-        window.location.href = "/dashboard";
-        return;
-      }
+      localStorage.setItem(
+        "teacherHubUsers",
+        JSON.stringify([...users, newUser])
+      );
 
-      form.reset();
-      setMessage("Account created successfully! Please sign in.");
+      setMessage("Account created successfully! You can now sign in.");
+      event.currentTarget.reset();
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -125,8 +114,7 @@ export default function RegisterPage() {
         </form>
 
         <p className="auth-switch">
-          Already have an account?{" "}
-          <Link href="/login">Sign in</Link>
+          Already have an account? <Link href="/login">Sign in</Link>
         </p>
       </div>
     </main>

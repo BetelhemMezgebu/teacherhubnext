@@ -4,41 +4,39 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(event) {
+  function handleLogin(event) {
     event.preventDefault();
     setError("");
     setLoading(true);
 
-    try {
-      const formData = new FormData(event.currentTarget);
-      const email = formData.get("email");
-      const password = formData.get("password");
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
 
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+    const users = JSON.parse(localStorage.getItem("teacherHubUsers") || "[]");
 
-      if (!result || result.error) {
-        setError("Invalid email or password. Please try again.");
-        return;
-      }
+    const user = users.find(
+      (item) => item.email === email && item.password === password
+    );
 
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("Unable to sign in. Please try again.");
-    } finally {
+    if (!user) {
+      setError("Invalid email or password. Please register first.");
       setLoading(false);
+      return;
     }
+
+    localStorage.setItem(
+      "teacherHubUser",
+      JSON.stringify({ name: user.name, email: user.email })
+    );
+
+    router.push("/dashboard");
   }
 
   return (
@@ -96,4 +94,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
